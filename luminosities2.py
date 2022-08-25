@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from scipy.optimize import curve_fit
-from Geometries import *
+from Geometries2 import *
 import math
 from scipy.stats import poisson
 
@@ -63,9 +63,11 @@ def threshold(L, E, param):
             events_count += 1
         else:
             pass
+        
     return events_count
 
-def plot(energy, E_v, X_ref, X_E, S_d, S_ref, L_ref, Earth_Lum, name, t, xlim, ylim):
+
+def plot(energy, E_v, X_ref, X_E, S_d, S_ref, L_ref, Earth_Lum, name, t, xlim, ylim, p0):
     """
     
 
@@ -108,9 +110,9 @@ def plot(energy, E_v, X_ref, X_E, S_d, S_ref, L_ref, Earth_Lum, name, t, xlim, y
     #threshold is min L you see a few neutrinos
     
     
-    p0 = [14, 20, 0.5e52, (-0.5e52 / 15), (0.5e52), (-0.5e52 / 12.5)]
+    p0 = p0
     param , cov = curve_fit(piecewise_linear, energy, L_t, p0)
-    yerr = 10e50
+    #yerr = 10e50
     
     #calc number of events above threshold
     events_count = threshold(Earth_Lum, E_v, param)
@@ -118,11 +120,11 @@ def plot(energy, E_v, X_ref, X_E, S_d, S_ref, L_ref, Earth_Lum, name, t, xlim, y
     #plotting the graph with all data points and threshold curve
     fig, ax = plt.subplots(figsize=(8, 8))
     plot = plt.scatter(E_v, Earth_Lum, c = t, cmap=cm.get_cmap('spring'))
-    plt.errorbar(energy, L_t, label = 'threshold', yerr = yerr, fmt = 'x', color = 'turquoise')
+    plt.errorbar(energy, L_t, label = 'threshold', fmt = 'x', color = 'turquoise')
     plt.plot(energy, piecewise_linear(energy, *param), color = 'turquoise')
     plt.legend()
     cb = plt.colorbar(plot, ax=ax, label = 'Time (ms)')
-    #ax.set_yscale('log')
+    #ax.set_xscale('log')
     plt.title(name)
     plt.xlim(xlim)
     plt.ylim(ylim)
@@ -132,9 +134,94 @@ def plot(energy, E_v, X_ref, X_E, S_d, S_ref, L_ref, Earth_Lum, name, t, xlim, y
 
     percentage_events = events_count / len(Earth_Lum) * 100
     print(percentage_events, '% events above threshold')
+    return percentage_events / 100
+
+#%%
+
+def thresholdlog(L, L_t):
+    #calculates how many events are aboove the threshold curve, by comparing to
+    #the value of the fit at each energy and luminosity
+    events_count = 0
+    
+    for i in range(0, len(L)):
+        if L_t[i] < L[i]:
+            events_count += 1
+        else:
+            pass
+    print(events_count)
     return events_count
 
-def plot2(energy, E_v_i, E_v_c, X_ref, X_E, S_d, S_ref, L_ref, Earth_Lum_i, Earth_Lum_c, name, t_i, t_c, xlim, ylim):
+def plotlog(energy, E_v, X_ref, X_E, S_d, S_ref, L_ref, Earth_Lum, name):
+    """
+    
+
+    Parameters
+    ----------
+    energy : array
+        reference energy used to plot threshold curve
+    E_v : array
+        neutrino energy for the event in question
+    X_ref : float
+        reference cross section used to calculate threshold curve
+    X_E : array
+        cross section of neutrinos at the energies of the E_v array
+    S_d : float
+        surface area of event
+    S_ref : float
+        surface area of detector
+    L_ref : float
+        reference luminosity used to calculate threshold curve
+    Earth_Lum : array
+        neutrino luminosities of event in question at Earth 
+        ie scaled depending on geometry
+    name : string
+        list element for title of graphs
+    t : array
+        times of events
+    xlim : tuple
+        domain of graph
+    ylim : tuple
+        range of graph 
+
+    Returns
+    -------
+    events_count : float
+        number of events above threshold
+
+    """
+    #find the threshold luminosities for our dataset
+    L_t = lum_thresh(X_ref, X_E, S_d, S_ref, L_ref)
+    #threshold is min L you see a few neutrinos
+    
+    logE = np.log(energy)
+    logL_t = np.log(L_t)
+
+    yerr = 10e45
+
+
+    #calc number of events above threshold
+    events_count = thresholdlog(Earth_Lum, L_t)
+
+
+    #plotting the graph with all data points and threshold curve
+    fig, ax = plt.subplots(figsize=(8, 8))
+    plot = plt.scatter(E_v, Earth_Lum, color = 'magenta')
+    plt.errorbar(energy, L_t, label = 'threshold', fmt = 'x', color = 'turquoise')
+    plt.plot(energy, L_t, color = 'turquoise')
+    plt.legend()
+    ax.set_yscale('log')
+    plt.semilogx()
+    plt.title(name)
+    plt.xlabel('Energy (MeV)')
+    plt.ylabel('Luminosity (ergs/s)')
+    plt.show()
+    
+    percentage_events = events_count / len(Earth_Lum) * 100
+    print(percentage_events, '% events above threshold')
+    return percentage_events / 100
+
+
+def plot2(energy, E_v_i, E_v_c, X_ref, X_E, S_d, S_ref, L_ref, Earth_Lum_i, Earth_Lum_c, name, t_i, t_c, xlim, ylim, p0):
     """
     
 
@@ -182,7 +269,7 @@ def plot2(energy, E_v_i, E_v_c, X_ref, X_E, S_d, S_ref, L_ref, Earth_Lum_i, Eart
     #threshold is min L you see a few neutrinos
 
     #calc the piecewise fit for threshold
-    p0 = [14, 20, 0.5e52, (-0.5e52 / 15), (0.5e52), (-0.5e52 / 12.5)]
+    p0 = p0
     param , cov = curve_fit(piecewise_linear, energy, L_t, p0)
     yerr = 10e50
     
@@ -199,10 +286,10 @@ def plot2(energy, E_v_i, E_v_c, X_ref, X_E, S_d, S_ref, L_ref, Earth_Lum_i, Eart
     plt.legend()
     cb = plt.colorbar(plot_i, ax=ax, label = 'Time Irrotational (ms)')
     cb2 = plt.colorbar(plot_c, ax=ax, label = 'Time Corotational (ms)')
-    #ax.set_yscale('log')
+    ax.set_yscale('log')
     plt.title(name)
-    plt.xlim(xlim)
-    plt.ylim(ylim)
+    #plt.xlim(xlim)
+    #plt.ylim(ylim)
     plt.xlabel('Energy (MeV)')
     plt.ylabel( 'Luminosity (ergs/s)')
     plt.show()
@@ -292,12 +379,12 @@ def energy_hist(t, X_ref, X_E, L_ref, L_Earth, no_events_ref, events_count, \
 #%% determining references for scale
 
 
-def events(X_ref, L_ref, t_ref, no_events_ref, X_E, L_Earth_E, E, name):
+def events(X_ref, L_ref, t_ref, no_events_ref, X_E, L_Earth_E, E, percent, name):
     
     cf = conversion_factor(X_ref, L_ref, t_ref, no_events_ref)
-    actual_events = np.array(rate_events(X_E, L_Earth_E)) * cf
+    actual_events = np.array(rate_events(X_E, L_Earth_E)) * cf * percent
 
-    prop_list = proportion_per_bin(actual_events)
+    #prop_list = proportion_per_bin(actual_events)
     
     plt.title('Histogram 1')
     hist, bins, idk = plt.hist(E, bins = len(E), weights = actual_events)
@@ -312,8 +399,9 @@ def events(X_ref, L_ref, t_ref, no_events_ref, X_E, L_Earth_E, E, name):
     
     plt.title('Histogram for Poisson Fluctuations for '  
               + name)
-    hist2, bins, idk = plt.hist(E, weights = (s2), bins = 10, color = 'turquoise', alpha = 0.5)
+    hist2, bins, idk = plt.hist(E, weights = (s2), bins = 10, color = 'turquoise', alpha = 0.25, label = 'Events')
     plt.xlabel('Energy (MeV)')
+    plt.legend()
     plt.ylabel('Events')
     plt.show()
 
@@ -333,7 +421,53 @@ def proportion_per_bin(onedlist):
     return prop_list
 
 
+#%%
+def distgraph(energy, E_v, X_ref, X_E, S_d, S_ref, L_ref, Earth_Lum, p0):
+    """
     
+
+    Parameters
+    ----------
+    energy : array
+        reference energy used to plot threshold curve
+    E_v : array
+        neutrino energy for the event in question
+    X_ref : float
+        reference cross section used to calculate threshold curve
+    X_E : array
+        cross section of neutrinos at the energies of the E_v array
+    S_d : float
+        surface area of event
+    S_ref : float
+        surface area of detector
+    L_ref : float
+        reference luminosity used to calculate threshold curve
+    Earth_Lum : array
+        neutrino luminosities of event in question at Earth 
+        ie scaled depending on geometry
+
+
+    Returns
+    -------
+    events_count : float
+        number of events above threshold
+
+    """
+    #find the threshold luminosities for our dataset
+    L_t = lum_thresh(X_ref, X_E, S_d, S_ref, L_ref)
+    #threshold is min L you see a few neutrinos
+    
+    
+    p0 = p0
+    param , cov = curve_fit(piecewise_linear, energy, L_t, p0)
+    yerr = 10e50
+    
+    #calc number of events above threshold
+    events_count = threshold(Earth_Lum, E_v, param)
+    
+    percentage_events = events_count / len(Earth_Lum) * 100
+    print(percentage_events, '% events above threshold')
+    return percentage_events / 100
 
 
 
