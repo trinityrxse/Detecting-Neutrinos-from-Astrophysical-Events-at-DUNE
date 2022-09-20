@@ -4,6 +4,8 @@
 Created on Thu Jul  7 13:15:03 2022
 
 @author: trinitystenhouse
+
+Here is the module with the geometry classes, to specify the geometry of your event
 """
 
 import numpy as np 
